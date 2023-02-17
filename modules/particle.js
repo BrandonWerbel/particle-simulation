@@ -4,7 +4,7 @@ export class Particle {
      * 
      * @param {Element} circle 
      */
-    constructor(particles) {
+    constructor(particles, speed=0) {
         this.particles = particles;
         this.circle = document.getElementsByClassName("particle")[0].cloneNode();
         this.r = parseFloat(/(\d+)/.exec(this.circle.getAttribute("r"))[0]);
@@ -20,7 +20,7 @@ export class Particle {
         document.getElementById("board").appendChild(this.circle);
 
         this.velDir = Math.random() * (2 * Math.PI);
-        this.speed = Math.random();
+        this.speed = speed;
         this.velX = Math.cos(this.velDir) * this.speed;
         this.velY = Math.sin(this.velDir) * this.speed;
         
@@ -61,7 +61,7 @@ export class Particle {
 
         var totalSpeed = 0;
         this.particles.forEach((p) => totalSpeed += p.speed);
-        console.log(totalSpeed);
+        // console.log(totalSpeed);
         
         this.wallBounce();
         var [newVX, newVY] = this.onCollision();
