@@ -3,9 +3,169 @@
     <title>Particle simulation</title>
 </head>
 <body>
+    <div id="initialSpeed"></div>
+    <div id="speeds"></div>
+    <div id="time"></div>
     <svg id="board" height="100vh" width="100vw">
-        <circle class="particle" cx="-30px" cy="-30px" r="10px" stroke="black" stroke-width="3" fill="red" />
+        <circle class="particle" cx="-30px" cy="-30px" r="3px" stroke="black" stroke-width="2" fill="red" />
     </svg>
     <source>
-    <script type="module" src="main.js"></script>
+    <script>
+        class Particle {
+
+            constructor(particles, speed=0) {
+                this.particles = particles;
+                this.circle = document.getElementsByClassName("particle")[0].cloneNode();
+                this.r = parseFloat(/(\d+)/.exec(this.circle.getAttribute("r"))[0]);
+                this.x = Math.random() * (document.documentElement.clientWidth - 2*this.r) + this.r;
+                this.y = Math.random() * (document.documentElement.clientHeight - 2*this.r) + this.r;
+
+                while(this.getColliding()){
+                    this.x = Math.random() * (document.documentElement.clientWidth - 2*this.r) + this.r;
+                    this.y = Math.random() * (document.documentElement.clientHeight - 2*this.r) + this.r;
+                }
+                this.circle.setAttribute("cx", this.x + "px");
+                this.circle.setAttribute("cy", this.y + "px");
+                document.getElementById("board").appendChild(this.circle);
+
+                this.velDir = Math.random() * (2 * Math.PI);
+                this.speed = speed;
+                this.velX = Math.cos(this.velDir) * this.speed;
+                this.velY = Math.sin(this.velDir) * this.speed;
+                
+                this.mass = 10;
+                this.justCollided = false;
+
+                this.speedsDiv = document.getElementById("speeds");
+
+                
+            }
+
+            update() {
+                this.velDir = Math.atan2(this.velY, this.velX);
+                this.speed = Math.sqrt(Math.pow(this.velX, 2) + Math.pow(this.velY, 2));
+
+                var totalSpeed = 0;
+                this.particles.forEach((p) => totalSpeed += Math.pow(p.speed, 2));
+                this.speedsDiv.textContent = totalSpeed;
+                
+                this.wallBounce();
+                var [newVX, newVY] = this.onCollision();
+                
+
+                if (!this.justCollided){
+                    this.velX = newVX;
+                    this.velY = newVY;
+                }
+            }
+
+            move() {
+                this.x += this.velX;
+                this.y += this.velY;
+
+                this.circle.setAttribute("cx", this.x);
+                this.circle.setAttribute("cy", this.y);
+            }
+
+            wallBounce() {
+                if (this.x <= this.r) {
+                    this.velX = Math.abs(this.velX);
+                }
+                else if (this.x >= document.documentElement.clientWidth - this.r){
+                    this.velX = -Math.abs(this.velX);
+                }
+                if (this.y <= this.r) {
+                    this.velY = Math.abs(this.velY);
+                } else if (this.y >= document.documentElement.clientHeight - this.r){
+                    this.velY = -Math.abs(this.velY);
+                }
+            }
+
+            getColliding() {
+                return !this.particles.every((p) => p == this || Math.sqrt(Math.pow(p.x - this.x, 2) + Math.pow(p.y - this.y, 2)) > 2 * this.r);
+            }
+
+            onCollision() {
+                var newVX = this.velX;
+                var newVY = this.velY;
+                if (!this.justCollided){
+                    this.particles.forEach(element => {
+                        if (element != this){
+                            var dx = element.x - this.x;
+                            var dy = element.y - this.y;
+                            var distance = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2))
+                            if (distance <= this.r*2) {
+                                var phi = Math.atan2(dy, dx);
+                                newVX = element.speed*Math.cos(element.velDir - phi)*Math.cos(phi) + this.speed*Math.sin(this.velDir - phi)*Math.cos(phi + (Math.PI/2))
+                                newVY = element.speed*Math.cos(element.velDir - phi)*Math.sin(phi) + this.speed*Math.sin(this.velDir - phi)*Math.sin(phi + (Math.PI/2))
+                                
+                                element.velX = this.speed*Math.cos(this.velDir - phi)*Math.cos(phi) + element.speed*Math.sin(element.velDir - phi)*Math.cos(phi + (Math.PI/2))
+                                element.velY = this.speed*Math.cos(this.velDir - phi)*Math.sin(phi) + element.speed*Math.sin(element.velDir - phi)*Math.sin(phi + (Math.PI/2))
+                                element.justCollided = true;
+                            }
+                        }
+                    });
+                } else {
+                    this.justCollided = false;
+                }
+                
+                if (!this.getColliding())
+                        return [this.velX, this.velY];
+                else
+                    return [newVX, newVY];
+            }
+
+        }
+
+        const r = 8.3144598
+        const avogadgro = 6.02214076 * Math.pow(10, 23);
+
+        const intervalSpeed = 1;
+        const simSpeed = 0.03;
+        const numParticles = 2000;
+        const temperature = 50;
+        const mass = 6.6464731 * Math.pow(10,-27)
+        const timeConst = (intervalSpeed / 1000.0) * simSpeed;
+
+        const timeDiv = document.getElementById("time");
+
+        var averageEnergy = (3.0 / 2) * (r / avogadgro) * temperature;
+        var averageVelocity = Math.sqrt(2 * averageEnergy / mass);
+
+        var totalVelocity = averageVelocity * numParticles;
+
+        console.log(averageVelocity * timeConst);
+        document.getElementById("initialSpeed").textContent = Math.pow(averageVelocity * timeConst, 2) * numParticles;
+        var particles = [];
+
+        particles[0] = new Particle(particles, averageVelocity * timeConst);
+        for(var i = 1; i < numParticles; i++){
+            particles[i] = new Particle(particles, averageVelocity * timeConst);
+
+        }
+
+        var speeds = [];
+
+        var download = function() {
+            var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(speeds));
+                var downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href",     dataStr);
+                downloadAnchorNode.setAttribute("download",  "speeds.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+        }
+
+        timeDiv.textContent = 0;
+        var interval = setInterval(() => {
+            particles.forEach(p => p.update());
+            particles.forEach(p => p.move());
+            particles.forEach((p, i) => speeds[i] = p.speed / timeConst)
+            timeDiv.textContent =  parseFloat(timeDiv.textContent) + timeConst;
+            if (parseFloat(timeDiv.textContent) >= 1){
+                download();
+                clearInterval(interval);
+            }
+        }, intervalSpeed);
+    </script>
 </body>

@@ -27,6 +27,8 @@ export class Particle {
         this.mass = 10;
         this.justCollided = false;
 
+        this.speedsDiv = document.getElementById("speeds");
+
         
     }
 
@@ -60,8 +62,8 @@ export class Particle {
         this.speed = Math.sqrt(Math.pow(this.velX, 2) + Math.pow(this.velY, 2));
 
         var totalSpeed = 0;
-        this.particles.forEach((p) => totalSpeed += p.speed);
-        // console.log(totalSpeed);
+        this.particles.forEach((p) => totalSpeed += Math.pow(p.speed, 2));
+        this.speedsDiv.textContent = totalSpeed;
         
         this.wallBounce();
         var [newVX, newVY] = this.onCollision();
